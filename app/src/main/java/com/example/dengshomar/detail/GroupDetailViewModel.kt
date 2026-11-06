@@ -96,4 +96,14 @@ class GroupDetailViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyMap()
     )
+    fun deleteExpense(expense: ExpenseEntity) {
+        viewModelScope.launch {
+            expenseDao.deleteExpense(expense)
+        }
+    }
+    fun deleteMember(member: MemberEntity) {
+        viewModelScope.launch {
+            memberDao.deleteMember(member)
+        }
+    }
 }

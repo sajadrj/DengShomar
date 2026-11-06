@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -113,10 +114,25 @@ fun GroupDetailScreen(
                             items(members) { member ->
                                 Card(modifier = Modifier.fillMaxWidth()) {
                                     Row(
-                                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(text = member.name, style = MaterialTheme.typography.titleMedium)
+                                        Text(
+                                            text = member.name,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+
+                                        // دکمه حذف عضو
+                                        IconButton(onClick = { viewModel.deleteMember(member) }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "حذف عضو",
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -137,16 +153,33 @@ fun GroupDetailScreen(
                             items(expenses) { expense ->
                                 val payerName = members.find { it.id == expense.paidByMemberId }?.name ?: "نامشخص"
                                 Card(modifier = Modifier.fillMaxWidth()) {
-                                    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(text = expense.title, style = MaterialTheme.typography.titleMedium)
-                                            Text(text = "${expense.amount} تومان", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(text = expense.title, style = MaterialTheme.typography.titleMedium)
+                                                Text(text = "${expense.amount.toInt()} تومان", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(text = "پرداخت‌کننده: $payerName", style = MaterialTheme.typography.bodySmall)
                                         }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(text = "پرداخت‌کننده: $payerName", style = MaterialTheme.typography.bodySmall)
+
+                                        // دکمه حذف هزینه
+                                        IconButton(onClick = { viewModel.deleteExpense(expense) }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "حذف",
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        }
                                     }
                                 }
                             }
