@@ -46,7 +46,7 @@ fun HomeScreenContent(
     var newGroupName by remember { mutableStateOf("") }
 
     Scaffold(
-        topBar = {
+    /*    topBar = {
             TopAppBar(
                 title = { Text("دنگ‌شمار") },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -54,7 +54,7 @@ fun HomeScreenContent(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
-        },
+        },*/
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "افزودن گروه")
