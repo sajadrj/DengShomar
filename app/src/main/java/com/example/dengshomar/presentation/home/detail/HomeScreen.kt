@@ -1,10 +1,12 @@
 package com.example.dengshomar.presentation.home.detail
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +25,22 @@ fun HomeScreen(
     // گرفتن لیست واقعی گروه‌ها از دیتابیس به صورت State
     val groups by viewModel.groups.collectAsState()
 
+    HomeScreenContent(
+        groups = groups,
+        onGroupClick = onGroupClick,
+        onAddGroup = { viewModel.addGroup(it) },
+        onDeleteGroup = { viewModel.deleteGroup(it) }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreenContent(
+    groups: List<GroupEntity>,
+    onGroupClick: (GroupEntity) -> Unit,
+    onAddGroup: (String) -> Unit,
+    onDeleteGroup: (GroupEntity) -> Unit
+) {
     // وضعیت نمایش دیالوگ
     var showAddDialog by remember { mutableStateOf(false) }
     var newGroupName by remember { mutableStateOf("") }
@@ -62,8 +80,10 @@ fun HomeScreen(
                 ) {
                     items(groups) { group ->
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onGroupClick(group) },
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -73,11 +93,17 @@ fun HomeScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = group.name, // نمایش نام گروه از دیتابیس
-                                    style = MaterialTheme.typography.titleMedium
+                                    text = group.name,
+                                    style = MaterialTheme.typography.titleLarge
                                 )
-                                TextButton(onClick = { onGroupClick(group) }) {
-                                    Text("مشاهده دنگ‌ها")
+
+                                // دکمه حذف گروه
+                                IconButton(onClick = { onDeleteGroup(group) }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "حذف گروه",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
                                 }
                             }
                         }
@@ -107,7 +133,7 @@ fun HomeScreen(
                     TextButton(
                         onClick = {
                             if (newGroupName.isNotBlank()) {
-                                viewModel.addGroup(newGroupName) // ذخیره واقعی در دیتابیس Room
+                                onAddGroup(newGroupName) // ذخیره واقعی در دیتابیس Room
                                 newGroupName = ""
                                 showAddDialog = false
                             }
@@ -129,10 +155,19 @@ fun HomeScreen(
             )
         }
     }
+
 }
 
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-    HomeScreen()
+    HomeScreenContent(
+        groups = listOf(
+            GroupEntity(id = 1, name = "سفر شمال", createdAt = 0L),
+            GroupEntity(id = 2, name = "هزینه خانه", createdAt = 0L)
+        ),
+        onGroupClick = {},
+        onAddGroup = {},
+        onDeleteGroup = {}
+    )
 }

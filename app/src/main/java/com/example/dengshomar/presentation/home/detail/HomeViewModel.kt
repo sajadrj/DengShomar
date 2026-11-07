@@ -35,4 +35,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    fun deleteGroup(group: GroupEntity) {
+        viewModelScope.launch {
+            groupDao.deleteGroup(group)
+        }
+    }
 }

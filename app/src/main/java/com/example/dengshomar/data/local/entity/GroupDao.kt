@@ -1,6 +1,7 @@
 package com.example.dengshomar.data.local
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -17,4 +18,7 @@ interface GroupDao {
     // درج گروه جدید در دیتابیس
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertGroup(group: GroupEntity)
+
+    @Delete
+    suspend fun deleteGroup(group: GroupEntity)
 }
