@@ -15,12 +15,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dengshomar.data.local.entity.GroupEntity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.ui.text.font.FontWeight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
-    onGroupClick: (GroupEntity) -> Unit = {} // مقدار پیش‌فرض برای سازگاری با Preview
+    onGroupClick: (GroupEntity) -> Unit = {},
+    onAboutClick: () -> Unit = {}
 ) {
     // گرفتن لیست واقعی گروه‌ها از دیتابیس به صورت State
     val groups by viewModel.groups.collectAsState()
@@ -29,7 +34,8 @@ fun HomeScreen(
         groups = groups,
         onGroupClick = onGroupClick,
         onAddGroup = { viewModel.addGroup(it) },
-        onDeleteGroup = { viewModel.deleteGroup(it) }
+        onDeleteGroup = { viewModel.deleteGroup(it) },
+        onAboutClick = onAboutClick
     )
 }
 
@@ -39,22 +45,55 @@ fun HomeScreenContent(
     groups: List<GroupEntity>,
     onGroupClick: (GroupEntity) -> Unit,
     onAddGroup: (String) -> Unit,
-    onDeleteGroup: (GroupEntity) -> Unit
+    onDeleteGroup: (GroupEntity) -> Unit,
+    onAboutClick: () -> Unit
 ) {
     // وضعیت نمایش دیالوگ
     var showAddDialog by remember { mutableStateOf(false) }
     var newGroupName by remember { mutableStateOf("") }
 
     Scaffold(
-    /*    topBar = {
-            TopAppBar(
-                title = { Text("دنگ‌شمار") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        },*/
+        topBar = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // بخش نوشته‌ها (سمت راست)
+                Column {
+                    Text(
+                        text = "دنگ‌شمار",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "مدیریت هوشمند هزینه‌ها",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // بخش آیکون آدمک (سمت چپ)
+                IconButton(
+                    onClick = onAboutClick,
+                    modifier = Modifier
+                        .background(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            shape = CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "درباره برنامه‌نویس",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "افزودن گروه")
@@ -155,10 +194,9 @@ fun HomeScreenContent(
             )
         }
     }
-
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "fa")
 @Composable
 fun HomeScreenPreview() {
     HomeScreenContent(
@@ -168,6 +206,7 @@ fun HomeScreenPreview() {
         ),
         onGroupClick = {},
         onAddGroup = {},
-        onDeleteGroup = {}
+        onDeleteGroup = {},
+        onAboutClick = {}
     )
 }

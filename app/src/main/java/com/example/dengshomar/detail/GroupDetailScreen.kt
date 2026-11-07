@@ -12,11 +12,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
-
+import com.example.dengshomar.data.local.entity.ExpenseEntity
+import com.example.dengshomar.data.local.entity.MemberEntity
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupDetailScreen(
@@ -33,6 +37,32 @@ fun GroupDetailScreen(
     val expenses by viewModel.expenses.collectAsState()
     val memberBalances by viewModel.memberBalances.collectAsState()
 
+    GroupDetailContent(
+        groupName = groupName,
+        members = members,
+        expenses = expenses,
+        memberBalances = memberBalances,
+        onBackClick = onBackClick,
+        onAddMember = { viewModel.addMember(it) },
+        onDeleteMember = { viewModel.deleteMember(it) },
+        onAddExpense = { title, amount, payerId -> viewModel.addExpense(title, amount, payerId) },
+        onDeleteExpense = { viewModel.deleteExpense(it) }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GroupDetailContent(
+    groupName: String,
+    members: List<MemberEntity>,
+    expenses: List<ExpenseEntity>,
+    memberBalances: Map<String, Double>,
+    onBackClick: () -> Unit,
+    onAddMember: (String) -> Unit,
+    onDeleteMember: (MemberEntity) -> Unit,
+    onAddExpense: (String, Double, Long) -> Unit,
+    onDeleteExpense: (ExpenseEntity) -> Unit
+) {
     // مدیریت تب‌های صفحه (تب 0: اعضا، تب 1: هزینه‌ها، تب 2: تسویه حساب)
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("اعضا (${members.size})", "هزینه‌ها (${expenses.size})", "تسویه حساب")
@@ -52,8 +82,12 @@ fun GroupDetailScreen(
                 TopAppBar(
                     title = { Text("گروه: $groupName") },
                     navigationIcon = {
-                        TextButton(onClick = onBackClick) {
-                            Text("بازگشت")
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                // استفاده از AutoMirrored باعث می‌شود فلش در حالت راست‌چین (فارسی) به صورت خودکار به سمت راست برگردد
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "بازگشت"
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -126,7 +160,7 @@ fun GroupDetailScreen(
                                         )
 
                                         // دکمه حذف عضو
-                                        IconButton(onClick = { viewModel.deleteMember(member) }) {
+                                        IconButton(onClick = { onDeleteMember(member) }) {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
                                                 contentDescription = "حذف عضو",
@@ -173,7 +207,7 @@ fun GroupDetailScreen(
                                         }
 
                                         // دکمه حذف هزینه
-                                        IconButton(onClick = { viewModel.deleteExpense(expense) }) {
+                                        IconButton(onClick = { onDeleteExpense(expense) }) {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
                                                 contentDescription = "حذف",
@@ -246,7 +280,7 @@ fun GroupDetailScreen(
                 confirmButton = {
                     TextButton(onClick = {
                         if (newMemberName.isNotBlank()) {
-                            viewModel.addMember(newMemberName)
+                            onAddMember(newMemberName)
                             newMemberName = ""
                             showAddMemberDialog = false
                         }
@@ -258,7 +292,6 @@ fun GroupDetailScreen(
             )
         }
 
-        // دیالوگ افزودن هزینه
         // دیالوگ افزودن هزینه
         if (showAddExpenseDialog) {
             // اگر id انتخاب نشده بود، اولین عضو را پیش‌فرض انتخاب کن
@@ -341,7 +374,7 @@ fun GroupDetailScreen(
                         val amountVal = cleanedText.toDoubleOrNull() ?: 0.0
 
                         if (expenseTitle.isNotBlank() && amountVal > 0.0 && selectedPayerId != 0L) {
-                            viewModel.addExpense(expenseTitle, amountVal, selectedPayerId)
+                            onAddExpense(expenseTitle, amountVal, selectedPayerId)
                             expenseTitle = ""
                             expenseAmount = ""
                             showAddExpenseDialog = false
@@ -355,6 +388,35 @@ fun GroupDetailScreen(
                         expenseAmount = ""
                     }) { Text("انصراف") }
                 }
+            )
+        }
+    }
+}
+
+// 3. بخش پریویو (همراه با دیتای تستی)
+@Preview(showBackground = true, locale = "fa")
+@Composable
+fun GroupDetailScreenPreview() {
+    MaterialTheme {
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+            GroupDetailContent(
+                groupName = "سفر شمال",
+                members = listOf(
+                    MemberEntity(id = 1L, groupId = 1L, name = "سجاد"),
+                    MemberEntity(id = 2L, groupId = 1L, name = "علی")
+                ),
+                expenses = listOf(
+                    ExpenseEntity(id = 1L, groupId = 1L, title = "شام", amount = 450000.0, paidByMemberId = 1L, date = 0L)
+                ),
+                memberBalances = mapOf(
+                    "سجاد" to 225000.0,
+                    "علی" to -225000.0
+                ),
+                onBackClick = {},
+                onAddMember = {},
+                onDeleteMember = {},
+                onAddExpense = { _, _, _ -> },
+                onDeleteExpense = {}
             )
         }
     }

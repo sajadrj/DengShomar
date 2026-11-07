@@ -33,10 +33,16 @@ fun DengShomarTheme(
     val view = LocalView.current
 
     if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+        if (!view.isInEditMode) {
+            SideEffect {
+                val window = (view.context as Activity).window
+
+                // ۱. رنگ نوار وضعیت گوشی را دقیقاً همرنگ پس‌زمینه اپلیکیشن می‌کنیم
+                window.statusBarColor = colorScheme.background.toArgb()
+
+                // ۲. چون پس‌زمینه ما روشن است، مقدار زیر را true می‌کنیم تا ساعت و باتری مشکی/تیره شوند
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
+            }
         }
     }
 
