@@ -4,7 +4,9 @@ import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
@@ -13,14 +15,43 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dengshomar.data.local.entity.ExpenseEntity
 import com.example.dengshomar.data.local.entity.MemberEntity
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import java.text.DecimalFormat
+import kotlin.math.abs
+
+// تابع تبدیل اعداد فارسی و عربی به انگلیسی
+fun convertToEnglishDigits(str: String): String {
+    val persian = listOf('۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹')
+    val arabic = listOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
+    var result = str
+    for (i in 0..9) {
+        result = result.replace(persian[i], '0' + i)
+        result = result.replace(arabic[i], '0' + i)
+    }
+    return result
+}
+
+// تابع فرمت‌دهی مبلغ به صورت ۳ رقم ۳ رقم (مثلاً ۱,۰۰۰,۰۰۰)
+fun formatAmount(amount: Double): String {
+    val formatter = DecimalFormat("#,###")
+    return formatter.format(abs(amount).toLong())
+}
+
+// تابع فرمت‌دهی ورودی متن موقع تایپ در فیلد مبلغ
+fun formatAmountInput(input: String): String {
+    val cleanedDigits = convertToEnglishDigits(input).replace(Regex("[^0-9]"), "")
+    if (cleanedDigits.isEmpty()) return ""
+    val number = cleanedDigits.toLongOrNull() ?: return cleanedDigits
+    return DecimalFormat("#,###").format(number)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupDetailScreen(
@@ -36,12 +67,14 @@ fun GroupDetailScreen(
     val members by viewModel.members.collectAsState()
     val expenses by viewModel.expenses.collectAsState()
     val memberBalances by viewModel.memberBalances.collectAsState()
+    val settlementTransactions by viewModel.settlementTransactions.collectAsState()
 
     GroupDetailContent(
         groupName = groupName,
         members = members,
         expenses = expenses,
         memberBalances = memberBalances,
+        settlementTransactions = settlementTransactions,
         onBackClick = onBackClick,
         onAddMember = { viewModel.addMember(it) },
         onDeleteMember = { viewModel.deleteMember(it) },
@@ -57,6 +90,7 @@ fun GroupDetailContent(
     members: List<MemberEntity>,
     expenses: List<ExpenseEntity>,
     memberBalances: Map<String, Double>,
+    settlementTransactions: List<SettlementTransaction> = emptyList(),
     onBackClick: () -> Unit,
     onAddMember: (String) -> Unit,
     onDeleteMember: (MemberEntity) -> Unit,
@@ -200,7 +234,7 @@ fun GroupDetailContent(
                                                 horizontalArrangement = Arrangement.SpaceBetween
                                             ) {
                                                 Text(text = expense.title, style = MaterialTheme.typography.titleMedium)
-                                                Text(text = "${expense.amount.toInt()} تومان", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+                                                Text(text = "${formatAmount(expense.amount)} تومان", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
                                             }
                                             Spacer(modifier = Modifier.height(4.dp))
                                             Text(text = "پرداخت‌کننده: $payerName", style = MaterialTheme.typography.bodySmall)
@@ -231,20 +265,95 @@ fun GroupDetailContent(
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            // بخش اول: نحوه تسویه حساب و پرداخت‌ها
+                            item {
+                                Text(
+                                    text = "نحوه تسویه (پرداخت‌ها):",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            }
+
+                            if (settlementTransactions.isEmpty()) {
+                                item {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                    ) {
+                                        Text(
+                                            text = "همه حساب‌ها تسویه هستند! هیچ پرداختی نیاز نیست. 🎉",
+                                            modifier = Modifier.padding(16.dp),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            } else {
+                                items(settlementTransactions) { transaction ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                                        )
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "${transaction.fromMemberName} ⬅️ ${transaction.toMemberName}",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = "${transaction.fromMemberName} باید به ${transaction.toMemberName} بدهد",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                                )
+                                            }
+                                            Text(
+                                                text = "${formatAmount(transaction.amount)} تومان",
+                                                style = MaterialTheme.typography.titleLarge,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // بخش دوم: وضعیت تراز مالی کل اعضا
+                            item {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "تراز مالی کل اعضا:",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            }
+
                             items(memberBalances.entries.toList()) { entry ->
                                 val name = entry.key
                                 val balance = entry.value
                                 Card(modifier = Modifier.fillMaxWidth()) {
                                     Row(
-                                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(text = name, style = MaterialTheme.typography.titleMedium)
 
                                         val statusText = when {
-                                            balance > 0 -> "طلبکار: +${balance.toInt()} تومان"
-                                            balance < 0 -> "بدهکار: ${balance.toInt()} تومان"
+                                            balance > 0 -> "طلبکار: +${formatAmount(balance)} تومان"
+                                            balance < 0 -> "بدهکار: -${formatAmount(balance)} تومان"
                                             else -> "بی‌حساب (تسویه)"
                                         }
                                         val statusColor = if (balance >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
@@ -325,9 +434,12 @@ fun GroupDetailContent(
                         )
                         OutlinedTextField(
                             value = expenseAmount,
-                            onValueChange = { expenseAmount = it },
+                            onValueChange = { newValue ->
+                                expenseAmount = formatAmountInput(newValue)
+                            },
                             label = { Text("مبلغ (تومان)") },
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
                         Text("پرداخت کننده:", style = MaterialTheme.typography.bodyMedium)
@@ -358,18 +470,6 @@ fun GroupDetailContent(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        // تابع تبدیل اعداد فارسی و عربی به انگلیسی
-                        fun convertToEnglishDigits(str: String): String {
-                            val persian = listOf('۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹')
-                            val arabic = listOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
-                            var result = str
-                            for (i in 0..9) {
-                                result = result.replace(persian[i], '0' + i)
-                                result = result.replace(arabic[i], '0' + i)
-                            }
-                            return result
-                        }
-
                         val cleanedText = convertToEnglishDigits(expenseAmount.replace(",", "").trim())
                         val amountVal = cleanedText.toDoubleOrNull() ?: 0.0
 
@@ -411,6 +511,9 @@ fun GroupDetailScreenPreview() {
                 memberBalances = mapOf(
                     "سجاد" to 225000.0,
                     "علی" to -225000.0
+                ),
+                settlementTransactions = listOf(
+                    SettlementTransaction(fromMemberName = "علی", toMemberName = "سجاد", amount = 225000.0)
                 ),
                 onBackClick = {},
                 onAddMember = {},

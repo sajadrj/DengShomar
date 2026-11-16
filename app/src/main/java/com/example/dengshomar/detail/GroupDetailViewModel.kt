@@ -12,6 +12,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+data class SettlementTransaction(
+    val fromMemberName: String, // بدهکار
+    val toMemberName: String,   // طلبکار
+    val amount: Double          // مبلغ پرداختی
+)
+
 class GroupDetailViewModel(
     application: Application,
     val groupId: Long
@@ -95,6 +101,75 @@ class GroupDetailViewModel(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyMap()
+    )
+
+    // محاسبه تراکنش‌های پیشنهادی برای تسویه حساب (کی به کی چقدر بدهد)
+    val settlementTransactions: StateFlow<List<SettlementTransaction>> = combine(members, expenses) { memberList, expenseList ->
+        val totalExpense = expenseList.sumOf { it.amount }
+        val memberCount = memberList.size
+
+        if (memberCount == 0) return@combine emptyList<SettlementTransaction>()
+
+        val fairShare = totalExpense / memberCount
+
+        val paidMap = mutableMapOf<Long, Double>()
+        memberList.forEach { paidMap[it.id] = 0.0 }
+
+        expenseList.forEach { expense ->
+            val currentPaid = paidMap[expense.paidByMemberId] ?: 0.0
+            paidMap[expense.paidByMemberId] = currentPaid + expense.amount
+        }
+
+        class PersonBalance(val name: String, var netBalance: Double)
+
+        val debtors = mutableListOf<PersonBalance>()   // بدهکاران (مقدار بدهی به صورت مثبت)
+        val creditors = mutableListOf<PersonBalance>() // طلبکاران
+
+        memberList.forEach { member ->
+            val paid = paidMap[member.id] ?: 0.0
+            val net = paid - fairShare
+            if (net < -0.01) {
+                debtors.add(PersonBalance(member.name, -net))
+            } else if (net > 0.01) {
+                creditors.add(PersonBalance(member.name, net))
+            }
+        }
+
+        val transactions = mutableListOf<SettlementTransaction>()
+        var debtorIndex = 0
+        var creditorIndex = 0
+
+        while (debtorIndex < debtors.size && creditorIndex < creditors.size) {
+            val debtor = debtors[debtorIndex]
+            val creditor = creditors[creditorIndex]
+
+            val amount = minOf(debtor.netBalance, creditor.netBalance)
+            if (amount > 0.01) {
+                transactions.add(
+                    SettlementTransaction(
+                        fromMemberName = debtor.name,
+                        toMemberName = creditor.name,
+                        amount = amount
+                    )
+                )
+            }
+
+            debtor.netBalance -= amount
+            creditor.netBalance -= amount
+
+            if (debtor.netBalance < 0.01) {
+                debtorIndex++
+            }
+            if (creditor.netBalance < 0.01) {
+                creditorIndex++
+            }
+        }
+
+        transactions
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
     )
     fun deleteExpense(expense: ExpenseEntity) {
         viewModelScope.launch {
